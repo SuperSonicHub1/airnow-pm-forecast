@@ -1,0 +1,41 @@
+name: Generate new report
+
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 13 * * *'
+
+jobs:
+  scheduled:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.11
+    - uses: actions/cache@v4
+      name: Configure pip caching
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    - name: Install Python dependencies
+      run: |-
+        pip install -r requirements.txt
+    - name: Generate report
+      run: |-
+        python generate_report.py
+    - name: Commit and push if changed
+      run: |-
+        git config user.name "Automated"
+        git config user.email "actions@users.noreply.github.com"
+        git add resources/report.pdf resources/report.png
+        timestamp=$(date -u)
+        git commit -m "Latest report: ${timestamp}" || exit 0
+        git push
